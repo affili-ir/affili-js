@@ -1,4 +1,14 @@
-(function(window) {
+if(typeof(affiliData) !== 'array') {
+    window.affiliData = window.affiliData || [];
+}
+
+if(typeof(affili) !== 'function') {
+    window.affili = function() {
+        affiliData.push(arguments);
+    }
+}
+
+(function(window, accountId) {
     // Cookies helper
     const cookies = {
         getCookie(name, def = null) {
@@ -94,8 +104,8 @@
         }
     }
 
-    const affili = {
-        account_id: false,
+    const affiliConst = {
+        account_id: accountId,
         aff_id: false,
         referrer: false,
         token: false,
@@ -174,27 +184,36 @@
             })
         },
 
-        // conversionMulti(external_id, amount, commissions, options = {}) {
-        //     if(this.aff_id === false || this.referrer === false) {
-        //         return false
-        //     }
 
-        //     const defaultDetectOptions = {
-        //         meta_data: {},
-        //         coupons: ''
-        //     }
+        conversionMulti(external_id, amount, commissions, options = {}, deleteCookie = true) {
+            if(this.aff_id === false || this.referrer === false) {
+                return false
+            }
 
-        //     const data = Object.assign({}, defaultDetectOptions, options, {
-        //         aff_id: this.aff_id,
-        //         referrer: this.referrer,
-        //         account_id: this.account_id,
-        //         external_id: external_id,
-        //         amount: amount,
-        //         commissions: commissions
-        //     })
+            const defaultDetectOptions = {
+                meta_data: {},
+                coupon: null,
+                type: transactionTypes.BUY_REFERRAL,
+            }
 
-        //     xhr.saveConversion(data)
-        // },
+            const data = Object.assign({}, defaultDetectOptions, options, {
+                aff_id: this.aff_id,
+                referrer: this.referrer,
+                account_id: this.account_id,
+                external_id: external_id,
+                amount: amount,
+                commissions: commissions
+            })
+
+            xhr.saveConversion(data, function(response) {
+                //As a default we reset
+                if(['1',1,'true', true].includes(cookies.getCookie('delete_cookie', true))
+                    && deleteCookie === true
+                ) {
+                    that.reset()
+                }
+            })
+        },
 
         reset() {
             this.aff_id   = false
@@ -204,15 +223,22 @@
             cookies.deleteCookie('affili_referrer')
             cookies.deleteCookie('affili_aff_id')
             cookies.deleteCookie('delete_cookie')
+        },
+
+        log() {
+            console.log({
+                'account_id' : this.account_id,
+                'aff_id'     : this.aff_id,
+                'referrer'   : this.referrer,
+                'token'      : this.token,
+            })
         }
     }
-
-    window.affiliData = window.affiliData || []
 
     let affiliFunc = function(method, params) {
         return new Promise(function(resolve, reject) {
             try {
-                let result = affili[method](...params)
+                let result = affiliConst[method](...params)
                 resolve(result)
             } catch(e) {
                 reject(e)
@@ -238,4 +264,4 @@
             affiliFunc(arg[0], slicedArgs)
         })
     })
-})(window)
+})(window, affiliAccountId)
