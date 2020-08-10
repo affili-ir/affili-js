@@ -46,7 +46,7 @@ let commissions = [
         sub_amount: 40000
     },
 ];
-affili('conversion', EXTERNAL_ID, AMOUNT, commissions);
+affili('conversionMulti', EXTERNAL_ID, AMOUNT, commissions);
 ```
 
 
