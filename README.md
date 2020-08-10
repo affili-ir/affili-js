@@ -32,7 +32,7 @@ affili('conversion', EXTERNAL_ID, AMOUNT, COMMISSION_KEY);
 ## Track Multi Conversion
 To track multi conversions run the following code in a goal page or call it when the action happend.
 For example when a customer buy products where have different categories the following code need to run at the thank you page.
-Replace **EXTERNAL_ID** with the invoice number, **AMOUNT** with the amount of conversion, **commissions** with the array of objects of commissions like below example.
+Replace **EXTERNAL_ID** with the invoice number, **AMOUNT** with the total amount of conversion, **commissions** with the array of objects of commissions like below example.
 
 
 ```Javascript
