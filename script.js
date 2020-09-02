@@ -19,7 +19,7 @@ if(typeof(affili) !== 'function') {
  * The window object is supported by all browsers. It represents the browser's window.
  * The accountId is your account id where can be fined in your affili panel, in developers section.
  */
-(function(window, accountId) {
+(function(window, accountId = false) {
    /**
     * Is a cookie object to help create, edit or delete cookies
     * based on js-cookie package
