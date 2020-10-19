@@ -19,7 +19,7 @@ if(typeof(affili) !== 'function') {
  * The window object is supported by all browsers. It represents the browser's window.
  * The accountId is your account id where can be fined in your affili panel, in developers section.
  */
-(function(window, accountId = false) {
+(function(window) {
    /**
     * Is a cookie object to help create, edit or delete cookies
     * based on js-cookie package
@@ -49,12 +49,9 @@ if(typeof(affili) !== 'function') {
     */
     const conversionTypes = {
         CLICK: 'click',
-        LEAD_REFERRAL: 'lead_referral',
-        TRIAL_REFERRAL: 'trial_referral',
-        BUY_REFERRAL: 'buy_referral',
-        LEAD_CODE: 'lead_code',
-        TRIAL_CODE: 'trial_code',
-        BUY_CODE: 'buy_code',
+        LEAD: 'lead',
+        TRIAL: 'trial',
+        BUY: 'buy',
     }
 
     /**
@@ -94,40 +91,21 @@ if(typeof(affili) !== 'function') {
          * When we need to set a cookie on the client browser
          *
          * @param {object} data
-         * @param {function} callback
+         * @param {function} resolve
          */
-        setCookie(data, callback = function(response){}) {
-            this.request('POST', this.url('set-cookie'), data, callback)
+        setCookie(data, resolve = function(response){}) {
+            this.request('POST', this.url('set-cookie'), data, resolve)
         },
 
         /**
-         * When we need to track order
+         * When we need to track conversion
          *
          * @param {object} data
-         * @param {function} callback
+         * @param {function} resolve
+         * @param {function} reject
          */
-        saveConversion(data, callback = function(response){}) {
-            this.request('POST', this.url('conversion'), data, callback)
-        },
-
-        /**
-         * When we need to track click, use it for CPC conversion
-         *
-         * @param {object} data
-         * @param {funtion} callback
-         */
-        saveClick(data, callback = function(response){}) {
-            this.request('POST', url('click'), data, callback)
-        },
-
-        /**
-         * When we need to track leads, use it for CPL conversion
-         *
-         * @param {object} data
-         * @param {function} callback
-         */
-        saveLead(data, callback = function(response){}) {
-            this.request('POST', url('lead'), data, callback)
+        saveConversion(data, resolve = function(response){}, reject = function(response){}, ) {
+            this.request('POST', this.url('conversion'), data, resolve, reject)
         },
 
         /**
@@ -145,16 +123,17 @@ if(typeof(affili) !== 'function') {
          * @param {string} method
          * @param {string} url
          * @param {object} data
-         * @param {function} callback
+         * @param {function} resolve
+         * @param {function} reject
          */
-        request(method, url ,data, callback = function(response){}) {
+        request(method, url ,data, resolve = function(response){}, reject = function(response){}) {
             let xhr = "undefined" != typeof XMLHttpRequest ? new XMLHttpRequest : new ActiveXObject("Microsoft.XMLHTTP");
             xhr.withCredentials = true
 
             xhr.addEventListener("readystatechange", function () {
-                if (this.readyState === 4 && this.status === 200) {
+                if(this.readyState === 4) {
                     let response = JSON.parse(this.response)
-                    callback(response)
+                    this.status === 200 ? resolve(response) : reject(response)
                 }
             })
 
@@ -172,7 +151,7 @@ if(typeof(affili) !== 'function') {
      * The affiliConst object manage all of traking processes
      */
     const affiliConst = {
-        account_id: accountId,
+        account_id: false,
         aff_id: false,
         referrer: false,
         token: false,
@@ -247,7 +226,7 @@ if(typeof(affili) !== 'function') {
             const defaultDetectOptions = {
                 meta_data: null,
                 coupon: null,
-                type: conversionTypes.BUY_REFERRAL,
+                type: conversionTypes.BUY,
             }
 
             const data = Object.assign({}, defaultDetectOptions, options, {
@@ -265,7 +244,6 @@ if(typeof(affili) !== 'function') {
                 ]
             })
 
-                        
             // Save conversion and reset cookies as a default
             xhr.saveConversion(data, function(response) {
                 // As a default we reset cookies
@@ -288,6 +266,7 @@ if(typeof(affili) !== 'function') {
          * @param {boolean} deleteCookie
          */
         conversionMulti(external_id, amount, commissions, options = {}, deleteCookie = true) {
+            let that = this
             if(this.aff_id === false || this.referrer === false) {
                 return false
             }
@@ -295,7 +274,7 @@ if(typeof(affili) !== 'function') {
             const defaultDetectOptions = {
                 meta_data: {},
                 coupon: null,
-                type: conversionTypes.BUY_REFERRAL,
+                type: conversionTypes.BUY,
             }
 
             const data = Object.assign({}, defaultDetectOptions, options, {
@@ -341,7 +320,7 @@ if(typeof(affili) !== 'function') {
                 token: this.token,
             })
 
-            xhr.saveClick(data)
+            xhr.saveConversion(data)
         },
 
         /**
@@ -357,7 +336,7 @@ if(typeof(affili) !== 'function') {
 
             const defaultDetectOptions = {
                 meta_data: {},
-                type: conversionTypes.LEAD_REFERRAL,
+                type: conversionTypes.LEAD,
             }
 
             const data = Object.assign({}, defaultDetectOptions, options, {
@@ -368,7 +347,7 @@ if(typeof(affili) !== 'function') {
                 name: name,
             })
 
-            xhr.saveLead(data)
+            xhr.saveConversion(data)
         },
 
         /**
@@ -439,4 +418,4 @@ if(typeof(affili) !== 'function') {
             affiliFunc(arg[0], slicedArgs)
         })
     })
-})(window, affiliAccountId)
+})(window)
