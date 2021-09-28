@@ -91,21 +91,20 @@ if(typeof(affili) !== 'function') {
          * When we need to set a cookie on the client browser
          *
          * @param {object} data
-         * @param {function} resolve
+         * @param {function} callback
          */
-        setCookie(data, resolve = function(response){}) {
-            this.request('POST', this.url('set-cookie'), data, resolve)
+        setCookie(data, callback = function(response){}) {
+            this.request('POST', this.url('set-cookie'), data, callback)
         },
 
         /**
          * When we need to track conversion
          *
          * @param {object} data
-         * @param {function} resolve
-         * @param {function} reject
+         * @param {function} callback
          */
-        saveConversion(data, resolve = function(response){}, reject = function(response){}, ) {
-            this.request('POST', this.url('conversion'), data, resolve, reject)
+        saveConversion(data, callback = function(response){}) {
+            this.request('POST', this.url('conversion'), data, callback)
         },
 
         /**
@@ -123,17 +122,16 @@ if(typeof(affili) !== 'function') {
          * @param {string} method
          * @param {string} url
          * @param {object} data
-         * @param {function} resolve
-         * @param {function} reject
+         * @param {function} callback
          */
-        request(method, url ,data, resolve = function(response){}, reject = function(response){}) {
+        request(method, url ,data, callback = function(response){}) {
             let xhr = "undefined" != typeof XMLHttpRequest ? new XMLHttpRequest : new ActiveXObject("Microsoft.XMLHTTP");
             xhr.withCredentials = true
 
             xhr.addEventListener("readystatechange", function () {
-                if(this.readyState === 4) {
+                if (this.readyState === 4 && this.status === 200) {
                     let response = JSON.parse(this.response)
-                    this.status === 200 ? resolve(response) : reject(response)
+                    callback(response)
                 }
             })
 
@@ -162,12 +160,14 @@ if(typeof(affili) !== 'function') {
          * @param {string} account_id
          * @param {object} options
          */
-        create(account_id, options) {
+        create(account_id, options = {}, callback = function () {}) {
             this.account_id = account_id
 
             this.token    = cookies.getCookie('affili_token', false)
             this.referrer = cookies.getCookie('affili_referrer', false)
             this.aff_id   = cookies.getCookie('affili_aff_id', false)
+
+            callback()
         },
 
         /**
@@ -176,9 +176,9 @@ if(typeof(affili) !== 'function') {
          *
          * @param {object} options
          */
-        detect(options = {}) {
-            let that     = this
-            let aff_id   = request.getUrlParam('aff_id', false)
+        detect(options = {}, callback = function () {}) {
+            let that = this
+            let aff_id = request.getUrlParam('aff_id', false)
             let referrer = request.getUrlParam('referrer', false)
 
             // If the URL has not 'aff_id' and 'referrer' return false
@@ -186,7 +186,7 @@ if(typeof(affili) !== 'function') {
                 return false
             }
 
-            this.aff_id   = aff_id
+            this.aff_id = aff_id
             this.referrer = referrer
 
             const defaultDetectOptions = {}
@@ -206,6 +206,8 @@ if(typeof(affili) !== 'function') {
                 cookies.setCookie('affili_aff_id', that.aff_id, response.data.valid_days)
                 cookies.setCookie('delete_cookie', response.data.delete_cookie, response.data.valid_days)
             })
+
+            callback()
         },
 
         /**
@@ -217,23 +219,19 @@ if(typeof(affili) !== 'function') {
          * @param {object} options
          * @param {boolean} deleteCookie
          */
-        conversion(external_id, amount, name = 'default', options = {}, deleteCookie = true) {
-            let that = this
-            if(this.aff_id === false || this.referrer === false) {
-                return false
-            }
-
-            const defaultDetectOptions = {
+        conversion(external_id, amount, name = 'default', options = {}, deleteCookie = true, callback = function () {}) {
+            const defaultData = {
                 meta_data: null,
                 coupon: null,
                 type: conversionTypes.BUY,
-            }
 
-            const data = Object.assign({}, defaultDetectOptions, options, {
                 aff_id: this.aff_id,
                 referrer: this.referrer,
-                account_id: this.account_id,
                 token: this.token,
+            }
+
+            const data = Object.assign({}, defaultData, options, {
+                account_id: this.account_id,
                 external_id: external_id,
                 amount: amount,
                 commissions: [
@@ -244,6 +242,11 @@ if(typeof(affili) !== 'function') {
                 ]
             })
 
+            if(data.aff_id === false || data.referrer === false) {
+                return false
+            }
+            let that = this
+
             // Save conversion and reset cookies as a default
             xhr.saveConversion(data, function(response) {
                 // As a default we reset cookies
@@ -253,6 +256,8 @@ if(typeof(affili) !== 'function') {
                     that.reset()
                 }
             })
+
+            callback()
         },
 
         /**
@@ -265,27 +270,28 @@ if(typeof(affili) !== 'function') {
          * @param {object} options
          * @param {boolean} deleteCookie
          */
-        conversionMulti(external_id, amount, commissions, options = {}, deleteCookie = true) {
-            let that = this
-            if(this.aff_id === false || this.referrer === false) {
-                return false
-            }
-
-            const defaultDetectOptions = {
+        conversionMulti(external_id, amount, commissions, options = {}, deleteCookie = true, callback = function () {}) {
+            const defaultData = {
                 meta_data: {},
                 coupon: null,
                 type: conversionTypes.BUY,
-            }
 
-            const data = Object.assign({}, defaultDetectOptions, options, {
                 aff_id: this.aff_id,
                 referrer: this.referrer,
-                account_id: this.account_id,
                 token: this.token,
+            }
+
+            const data = Object.assign({}, defaultData, options, {
+                account_id: this.account_id,
                 external_id: external_id,
                 amount: amount,
                 commissions: commissions
             })
+
+            if(data.aff_id === false || data.referrer === false) {
+                return false
+            }
+            let that = this
 
             // Save conversion and reset cookies as a default
             xhr.saveConversion(data, function(response) {
@@ -296,6 +302,8 @@ if(typeof(affili) !== 'function') {
                     that.reset()
                 }
             })
+
+            callback()
         },
 
         /**
@@ -303,24 +311,27 @@ if(typeof(affili) !== 'function') {
          *
          * @param {obejct} options
          */
-        click(options = {}) {
-            if(this.aff_id === false || this.referrer === false) {
+        click(options = {}, callback = function () {}) {
+            const defaultData = {
+                meta_data: {},
+                type: conversionTypes.CLICK,
+
+                aff_id: this.aff_id,
+                referrer: this.referrer,
+                token: this.token,
+            }
+
+            const data = Object.assign({}, defaultData, options, {
+                account_id: this.account_id,
+            })
+
+            if(data.aff_id === false || data.referrer === false) {
                 return false
             }
 
-            const defaultDetectOptions = {
-                meta_data: {},
-                type: conversionTypes.CLICK,
-            }
-
-            const data = Object.assign({}, defaultDetectOptions, options, {
-                aff_id: this.aff_id,
-                referrer: this.referrer,
-                account_id: this.account_id,
-                token: this.token,
-            })
-
             xhr.saveConversion(data)
+
+            callback()
         },
 
         /**
@@ -329,50 +340,67 @@ if(typeof(affili) !== 'function') {
          * @param {string} name, The name is a key where you defined in the panel where you create commission
          * @param {object} options
          */
-        lead(name, options = {}) {
-            if(this.aff_id === false || this.referrer === false) {
-                return false
-            }
-
-            const defaultDetectOptions = {
+        lead(name, options = {}, callback = function () {}) {
+            const defaultData = {
                 meta_data: {},
                 type: conversionTypes.LEAD,
-            }
 
-            const data = Object.assign({}, defaultDetectOptions, options, {
                 aff_id: this.aff_id,
                 referrer: this.referrer,
-                account_id: this.account_id,
                 token: this.token,
+            }
+
+            const data = Object.assign({}, defaultData, options, {
+                account_id: this.account_id,
                 name: name,
             })
 
+            if(data.aff_id === false || data.referrer === false) {
+                return false
+            }
+
             xhr.saveConversion(data)
+
+            callback()
         },
 
         /**
          * Calling the reset method to clear all tokens and settings.
          */
-        reset() {
-            this.aff_id   = false
+        reset(callback = function () {}) {
+            this.aff_id = false
             this.referrer = false
-            this.token    = false
+            this.token = false
             cookies.deleteCookie('affili_token')
             cookies.deleteCookie('affili_referrer')
             cookies.deleteCookie('affili_aff_id')
             cookies.deleteCookie('delete_cookie')
+
+            callback()
         },
 
         /**
          * Calling the log method to print current settings in console
          */
-        log() {
+        log(callback = function () {}) {
             console.log({
-                'account_id' : this.account_id,
-                'aff_id'     : this.aff_id,
-                'referrer'   : this.referrer,
-                'token'      : this.token,
+                'account_id': this.account_id,
+                'aff_id': this.aff_id,
+                'referrer': this.referrer,
+                'token': this.token,
             })
+
+            callback()
+        },
+
+        __data__(callback = function () {}) {
+            const data = JSON.parse(JSON.stringify({
+                aff_id: this.aff_id,
+                referrer: this.referrer,
+                token: this.token,
+            }))
+
+            callback(data)
         }
     }
 
