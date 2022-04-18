@@ -34,9 +34,8 @@ if(typeof(affili) !== 'function') {
         setCookie(name, value, days) {
             let date = new Date
             date.setTime(date.getTime() + 24*60*60*1000*days)
-            let siteDomain = window.location.hostname
-            // document.cookie = name + "=" + value + ";path=/;expires=" + date.toGMTString()
-            document.cookie = name + "=" + value + ";domain=."+ siteDomain +";path=/;expires=" + date.toGMTString();
+            let siteDomain = location.hostname.split('.').slice(-2).join('.')
+            document.cookie = name + "=" + value + ";domain=."+ siteDomain +";path=/;expires=" + date.toGMTString()
         },
 
         deleteCookie(name) {
@@ -48,10 +47,8 @@ if(typeof(affili) !== 'function') {
     * All supported conversion types
     */
     const conversionTypes = {
-        CLICK: 'click',
         LEAD: 'lead',
-        TRIAL: 'trial',
-        BUY: 'buy',
+        SALE: 'sale',
     }
 
     /**
@@ -113,7 +110,7 @@ if(typeof(affili) !== 'function') {
          * @param {string} uri
          */
         url(uri) {
-            return 'https://core.affili.ir/api/clients/'+uri
+            return 'https://core.affili.ir/api/v2/clients/'+uri
         },
 
         /**
@@ -213,17 +210,17 @@ if(typeof(affili) !== 'function') {
         /**
          * Calling The conversion method, When The client order process completed and client reach goal page
          *
-         * @param {string} external_id
+         * @param {string} order_id
          * @param {integer} amount
-         * @param {string} name
          * @param {object} options
          * @param {boolean} deleteCookie
          */
-        conversion(external_id, amount, name = 'default', options = {}, deleteCookie = true, callback = function () {}) {
+        conversion(order_id, amount, options = {}, deleteCookie = true, callback = function () {}) {
             const defaultData = {
                 meta_data: null,
                 coupon: null,
-                type: conversionTypes.BUY,
+                products: null,
+                type: conversionTypes.SALE,
 
                 aff_id: this.aff_id,
                 referrer: this.referrer,
@@ -232,14 +229,8 @@ if(typeof(affili) !== 'function') {
 
             const data = Object.assign({}, defaultData, options, {
                 account_id: this.account_id,
-                external_id: external_id,
+                order_id: order_id,
                 amount: amount,
-                commissions: [
-                    {
-                        sub_amount: amount,
-                        name: name
-                    }
-                ]
             })
 
             if(data.aff_id === false || data.referrer === false) {
@@ -261,86 +252,11 @@ if(typeof(affili) !== 'function') {
         },
 
         /**
-         * Calling The conversionMulti method, When The client order process completed and client reach goal page
-         * and you have multi commission for multi categories
-         *
-         * @param {string} external_id
-         * @param {integer} amount
-         * @param {object} commissions
-         * @param {object} options
-         * @param {boolean} deleteCookie
-         */
-        conversionMulti(external_id, amount, commissions, options = {}, deleteCookie = true, callback = function () {}) {
-            const defaultData = {
-                meta_data: {},
-                coupon: null,
-                type: conversionTypes.BUY,
-
-                aff_id: this.aff_id,
-                referrer: this.referrer,
-                token: this.token,
-            }
-
-            const data = Object.assign({}, defaultData, options, {
-                account_id: this.account_id,
-                external_id: external_id,
-                amount: amount,
-                commissions: commissions
-            })
-
-            if(data.aff_id === false || data.referrer === false) {
-                return false
-            }
-            let that = this
-
-            // Save conversion and reset cookies as a default
-            xhr.saveConversion(data, function(response) {
-                //As a default we reset
-                if(['1',1,'true', true].includes(cookies.getCookie('delete_cookie', true))
-                    && deleteCookie === true
-                ) {
-                    that.reset()
-                }
-            })
-
-            callback()
-        },
-
-        /**
-         * Calling the click method, When in your affiliate program you set CPC commission
-         *
-         * @param {obejct} options
-         */
-        click(options = {}, callback = function () {}) {
-            const defaultData = {
-                meta_data: {},
-                type: conversionTypes.CLICK,
-
-                aff_id: this.aff_id,
-                referrer: this.referrer,
-                token: this.token,
-            }
-
-            const data = Object.assign({}, defaultData, options, {
-                account_id: this.account_id,
-            })
-
-            if(data.aff_id === false || data.referrer === false) {
-                return false
-            }
-
-            xhr.saveConversion(data)
-
-            callback()
-        },
-
-        /**
          * Calling the click method, When in your affiliate program you set CPL commissions
          *
-         * @param {string} name, The name is a key where you defined in the panel where you create commission
          * @param {object} options
          */
-        lead(name, options = {}, callback = function () {}) {
+         lead(options = {}, callback = function () {}) {
             const defaultData = {
                 meta_data: {},
                 type: conversionTypes.LEAD,
@@ -352,7 +268,6 @@ if(typeof(affili) !== 'function') {
 
             const data = Object.assign({}, defaultData, options, {
                 account_id: this.account_id,
-                name: name,
             })
 
             if(data.aff_id === false || data.referrer === false) {
